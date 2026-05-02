@@ -1,9 +1,10 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { getAllProducts } from "../services/productService";
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 const corsHeaders = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
 };
 
 export const handler: APIGatewayProxyHandler = async () => {

@@ -5,6 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch"
+  }
+  ,"devDependencies": {
+    "@types/aws-lambda": "^8.10.109"
   }
 }
