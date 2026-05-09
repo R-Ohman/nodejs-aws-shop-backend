@@ -25,6 +25,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create new product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /products/{productId}:
     get:
       summary: Get product by id
@@ -66,16 +93,43 @@ components:
       properties:
         id:
           type: string
+          description: UUID of the product
         title:
           type: string
+          description: Product title
         description:
           type: string
+          description: Product description
         price:
           type: number
+          description: Product price
         count:
           type: integer
-        image:
+          description: Product stock count from Stocks table
+      required:
+        - id
+        - title
+        - price
+        - count
+    CreateProductRequest:
+      type: object
+      properties:
+        title:
           type: string
+          description: Product title (required, non-empty)
+        description:
+          type: string
+          description: Product description (optional)
+        price:
+          type: number
+          description: Product price (required, >= 0)
+        count:
+          type: integer
+          description: Initial stock count (required, >= 0)
+      required:
+        - title
+        - price
+        - count
     ErrorResponse:
       type: object
       properties:
