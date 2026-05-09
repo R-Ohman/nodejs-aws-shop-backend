@@ -9,6 +9,7 @@ const corsHeaders = {
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
+    console.log("getProductById request", event.pathParameters);
     const id = event.pathParameters?.productId || event.pathParameters?.id || "";
     if (!id) {
       return {
@@ -33,6 +34,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       body: JSON.stringify(product),
     };
   } catch (err) {
+    console.error("getProductById error", err);
     return {
       statusCode: 500,
       headers: corsHeaders,
