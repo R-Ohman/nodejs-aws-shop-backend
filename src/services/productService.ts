@@ -2,9 +2,9 @@ import { products as localProducts, Product } from "../data/products";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
+  TransactWriteCommand,
   ScanCommand,
   GetCommand,
-  PutCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
@@ -45,7 +45,6 @@ export const getAllProducts = async (): Promise<Product[]> => {
     description: p.description,
     price: Number(p.price),
     count: stockMap.get(p.id) ?? 0,
-    image: p.image,
   }));
 
   return result;
@@ -71,7 +70,6 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     description: pItem.description,
     price: Number(pItem.price),
     count: Number(sItem?.count ?? 0),
-    image: pItem.image,
   };
 
   return product;
@@ -82,13 +80,12 @@ export const createProduct = async (data: {
   description?: string;
   price: number;
   count?: number;
-  image?: string;
 }): Promise<Product> => {
-  const { title, description, price, count = 0, image } = data;
+  const { title, description, price, count = 0 } = data;
   const id = randomUUID();
 
   if (!PRODUCTS_TABLE || !STOCKS_TABLE) {
-    const newProduct: Product = { id, title, description, price, count, image } as Product;
+    const newProduct: Product = { id, title, description, price, count } as Product;
     // push to local array (for local dev only)
     (localProducts as Product[]).push(newProduct);
     return newProduct;
@@ -97,14 +94,25 @@ export const createProduct = async (data: {
   const ddb = getDdbClient();
 
   await ddb.send(
-    new PutCommand({ TableName: PRODUCTS_TABLE, Item: { id, title, description, price, image } })
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Put: {
+            TableName: PRODUCTS_TABLE,
+            Item: { id, title, description, price },
+          },
+        },
+        {
+          Put: {
+            TableName: STOCKS_TABLE,
+            Item: { product_id: id, count },
+          },
+        },
+      ],
+    })
   );
 
-  await ddb.send(
-    new PutCommand({ TableName: STOCKS_TABLE, Item: { product_id: id, count } })
-  );
-
-  const created: Product = { id, title, description, price, count, image } as Product;
+  const created: Product = { id, title, description, price, count } as Product;
   return created;
 };
 

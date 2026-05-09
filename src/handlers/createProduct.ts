@@ -18,10 +18,31 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    const body = JSON.parse(event.body);
-    const { title, description, price, count, image } = body;
+    let body: unknown;
+    try {
+      body = JSON.parse(event.body);
+    } catch {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ message: "Invalid JSON body" }),
+      };
+    }
 
-    if (!title || typeof price === 'undefined') {
+    const payload = body as Record<string, unknown>;
+    const { title, description, price, count } = payload;
+
+    const numericPrice = Number(price);
+    const numericCount = Number(count ?? 0);
+
+    if (
+      typeof title !== "string" ||
+      !title.trim() ||
+      !Number.isFinite(numericPrice) ||
+      numericPrice < 0 ||
+      !Number.isInteger(numericCount) ||
+      numericCount < 0
+    ) {
       return {
         statusCode: 400,
         headers: corsHeaders,
@@ -29,7 +50,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       };
     }
 
-    const created = await createProduct({ title, description, price: Number(price), count: Number(count ?? 0), image });
+    const created = await createProduct({
+      title,
+      description: typeof description === "string" ? description : undefined,
+      price: numericPrice,
+      count: numericCount,
+    });
 
     return {
       statusCode: 201,
