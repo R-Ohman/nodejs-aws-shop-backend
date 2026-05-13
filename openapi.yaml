@@ -86,6 +86,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /import:
+    get:
+      summary: Get signed URL for product CSV upload
+      description: Returns a plain signed URL string for uploading a file to S3 under uploaded/{name}.
+      servers:
+        - url: https://replace-with-import-api-id.execute-api.eu-north-1.amazonaws.com/prod
+          description: Import Service API endpoint
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+          description: CSV file name to upload
+      responses:
+        '200':
+          description: Signed URL string
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: Missing name query parameter
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     Product:
