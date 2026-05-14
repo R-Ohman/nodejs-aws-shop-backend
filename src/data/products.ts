@@ -4,7 +4,6 @@ export interface Product {
   description?: string;
   price: number;
   count: number;
-  image?: string;
 }
 
 export const products: Product[] = [
@@ -14,7 +13,6 @@ export const products: Product[] = [
     description: "Comfortable running shoes",
     price: 120,
     count: 10,
-    image: "https://via.placeholder.com/150"
   },
   {
     id: "2",
@@ -22,7 +20,6 @@ export const products: Product[] = [
     description: "Stylish everyday sneakers",
     price: 95,
     count: 5,
-    image: "https://via.placeholder.com/150"
   },
   {
     id: "3",
@@ -30,6 +27,5 @@ export const products: Product[] = [
     description: "Lightweight trainers",
     price: 80,
     count: 0,
-    image: "https://via.placeholder.com/150"
   }
 ];

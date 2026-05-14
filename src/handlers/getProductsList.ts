@@ -9,6 +9,7 @@ const corsHeaders = {
 
 export const handler: APIGatewayProxyHandler = async () => {
   try {
+    console.log("getProductsList request");
     const list = await getAllProducts();
     return {
       statusCode: 200,
@@ -16,6 +17,7 @@ export const handler: APIGatewayProxyHandler = async () => {
       body: JSON.stringify(list),
     };
   } catch (err) {
+    console.error("getProductsList error", err);
     return {
       statusCode: 500,
       headers: corsHeaders,
