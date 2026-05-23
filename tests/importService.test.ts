@@ -2,6 +2,7 @@ import { Readable } from "stream";
 import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createImportSignedUrl, processImportedFile } from "../src/services/importService";
+import { SendMessageCommand } from "@aws-sdk/client-sqs";
 
 jest.mock(
   "csv-parser",
@@ -83,6 +84,25 @@ jest.mock(
   { virtual: true }
 );
 
+const sqsSend = jest.fn();
+
+jest.mock(
+  "@aws-sdk/client-sqs",
+  () => ({
+    SQSClient: class SQSClient {
+      send = sqsSend;
+    },
+    SendMessageCommand: class SendMessageCommand {
+      input: Record<string, unknown>;
+
+      constructor(input: Record<string, unknown>) {
+        this.input = input;
+      }
+    },
+  }),
+  { virtual: true }
+);
+
 jest.mock(
   "@aws-sdk/s3-request-presigner",
   () => ({
@@ -94,6 +114,7 @@ jest.mock(
 describe("importService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.CATALOG_ITEMS_QUEUE_URL = "https://sqs.eu-north-1.amazonaws.com/123456789012/catalog-items-queue";
   });
 
   it("creates a signed upload url for the uploaded folder", async () => {
@@ -126,8 +147,20 @@ describe("importService", () => {
     await processImportedFile("import-bucket", "uploaded/products.csv", { send } as never);
 
     expect(send).toHaveBeenNthCalledWith(1, expect.any(GetObjectCommand));
+    expect(sqsSend).toHaveBeenCalledWith(expect.any(SendMessageCommand));
     expect(send).toHaveBeenNthCalledWith(2, expect.any(CopyObjectCommand));
     expect(send).toHaveBeenNthCalledWith(3, expect.any(DeleteObjectCommand));
+
+    const queuedMessage = sqsSend.mock.calls[0][0] as SendMessageCommand;
+    expect(queuedMessage.input).toMatchObject({
+      QueueUrl: process.env.CATALOG_ITEMS_QUEUE_URL,
+      MessageBody: JSON.stringify({
+        title: "Book",
+        description: "Great book",
+        price: "10",
+        count: "2",
+      }),
+    });
 
     const copyCommand = send.mock.calls[1][0] as CopyObjectCommand;
     expect(copyCommand.input).toMatchObject({
@@ -136,15 +169,7 @@ describe("importService", () => {
       CopySource: "import-bucket/uploaded%2Fproducts.csv",
     });
 
-    expect(logSpy).toHaveBeenCalledWith(
-      "Parsed CSV record",
-      expect.objectContaining({
-        title: "Book",
-        description: "Great book",
-        price: "10",
-        count: "2",
-      })
-    );
+    expect(logSpy).not.toHaveBeenCalled();
 
     logSpy.mockRestore();
   });
