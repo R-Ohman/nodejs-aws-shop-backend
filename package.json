@@ -1,6 +1,8 @@
 {
   "name": "nodejs-aws-shop-backend",
   "version": "0.1.0",
+    "@aws-sdk/client-sns": "^3.842.0",
+    "@aws-sdk/client-sqs": "^3.842.0",
   "private": true,
   "main": "dist/index.js",
   "scripts": {

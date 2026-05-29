@@ -1,12 +1,15 @@
 import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import csvParser from "csv-parser";
 
 type S3Sender = Pick<S3Client, "send">;
+type SqsSender = Pick<SQSClient, "send">;
 
 const DEFAULT_URL_EXPIRATION_SECONDS = 3600;
 
 let s3Client: S3Client | null = null;
+let sqsClient: SQSClient | null = null;
 
 const getS3Client = (): S3Client => {
   if (s3Client) {
@@ -15,6 +18,25 @@ const getS3Client = (): S3Client => {
 
   s3Client = new S3Client({});
   return s3Client;
+};
+
+const getSqsClient = (): SQSClient => {
+  if (sqsClient) {
+    return sqsClient;
+  }
+
+  sqsClient = new SQSClient({});
+  return sqsClient;
+};
+
+const getCatalogItemsQueueUrl = (): string => {
+  const queueUrl = process.env.CATALOG_ITEMS_QUEUE_URL;
+
+  if (!queueUrl) {
+    throw new Error("Catalog items queue URL is required");
+  }
+
+  return queueUrl;
 };
 
 export const createImportSignedUrl = async (
@@ -67,15 +89,32 @@ export const processImportedFile = async (
   );
 
   const readableStream = toReadableStream(response.Body);
+  const queueClient = getSqsClient();
+  const queuedMessages: Promise<unknown>[] = [];
+  const queueUrl = getCatalogItemsQueueUrl();
 
   await new Promise<void>((resolve, reject) => {
     readableStream
       .pipe(csvParser())
       .on("data", (record) => {
-        console.log("Parsed CSV record", record);
+        queuedMessages.push(
+          queueClient.send(
+            new SendMessageCommand({
+              QueueUrl: queueUrl,
+              MessageBody: JSON.stringify(record),
+            })
+          )
+        );
       })
       .on("error", reject)
-      .on("end", resolve);
+      .on("end", async () => {
+        try {
+          await Promise.all(queuedMessages);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
   });
 
   const parsedKey = objectKey.startsWith("uploaded/")

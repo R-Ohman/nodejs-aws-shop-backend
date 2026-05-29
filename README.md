@@ -26,9 +26,10 @@ npm test
 ## Deployment
 
 ```bash
-git clone https://github.com/R-Ohman/nodejs-aws-shop-react.git
-cd nodejs-aws-shop-react
-npm run deploy
+cd infrastructure
+npm install
+npm run build
+npx cdk deploy
 ```
 
 Uses `ALLOWED_ORIGIN` env var for CORS (default: `*`). Set before deployment to restrict to specific origins:
