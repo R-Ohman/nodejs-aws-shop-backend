@@ -76,7 +76,7 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'dist/handlers/importProductsFile.handler',
       code: lambda.Code.fromAsset(backendPath, {
-        exclude: ['infrastructure/**', 'cdk.out/**', 'node_modules/**', '.git/**'],
+        exclude: ['infrastructure/**', 'cdk.out/**', '.git/**'],
       }),
       memorySize: 128,
       timeout: cdk.Duration.seconds(10),
@@ -91,7 +91,7 @@ export class ImportServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'dist/handlers/basicAuthorizer.handler',
       code: lambda.Code.fromAsset(backendPath, {
-        exclude: ['infrastructure/**', 'cdk.out/**', 'node_modules/**', '.git/**'],
+        exclude: ['infrastructure/**', 'cdk.out/**', '.git/**'],
       }),
       memorySize: 128,
       timeout: cdk.Duration.seconds(5),
@@ -146,9 +146,9 @@ export class ImportServiceStack extends cdk.Stack {
 
     const importResource = this.restApi.root.addResource('import');
 
-    const authorizer = new apigateway.RequestAuthorizer(this, 'BasicRequestAuthorizer', {
+    const authorizer = new apigateway.TokenAuthorizer(this, 'BasicTokenAuthorizer', {
       handler: basicAuthorizerFn,
-      identitySources: [apigateway.IdentitySource.header('Authorization')],
+      identitySource: 'method.request.header.Authorization',
     });
 
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileFn), {

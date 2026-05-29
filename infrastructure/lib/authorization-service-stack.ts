@@ -17,7 +17,7 @@ export class AuthorizationServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'dist/handlers/basicAuthorizer.handler',
       code: lambda.Code.fromAsset(backendPath, {
-        exclude: ['infrastructure/**', 'cdk.out/**', 'node_modules/**', '.git/**'],
+        exclude: ['infrastructure/**', 'cdk.out/**', '.git/**'],
       }),
       memorySize: 128,
       timeout: cdk.Duration.seconds(5),
