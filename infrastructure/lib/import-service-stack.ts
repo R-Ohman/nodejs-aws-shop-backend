@@ -10,6 +10,7 @@ import * as path from 'path';
 
 interface ImportServiceStackProps extends cdk.StackProps {
   catalogItemsQueue: sqs.IQueue;
+  basicAuthorizerLambda?: lambda.IFunction;
 }
 
 export class ImportServiceStack extends cdk.Stack {
@@ -74,7 +75,9 @@ export class ImportServiceStack extends cdk.Stack {
     const importProductsFileFn = new lambda.Function(this, 'ImportProductsFileFunction', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'dist/handlers/importProductsFile.handler',
-      code: lambda.Code.fromAsset(backendPath),
+      code: lambda.Code.fromAsset(backendPath, {
+        exclude: ['infrastructure/**', 'cdk.out/**', '.git/**'],
+      }),
       memorySize: 128,
       timeout: cdk.Duration.seconds(10),
       environment: {
@@ -83,10 +86,27 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
+    // Basic authorizer Lambda for validating Basic Authorization header
+    const basicAuthorizerFn = new lambda.Function(this, 'BasicAuthorizerFunction', {
+      runtime: lambda.Runtime.NODEJS_24_X,
+      handler: 'dist/handlers/basicAuthorizer.handler',
+      code: lambda.Code.fromAsset(backendPath, {
+        exclude: ['infrastructure/**', 'cdk.out/**', '.git/**'],
+      }),
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(5),
+      environment: {
+        // Fallback to TEST_PASSWORD when no local .env is provided during synth
+        R_OHMAN: process.env['R-Ohman'] || process.env['R_OHMAN'] || 'TEST_PASSWORD',
+      },
+    });
+
     const importFileParserFn = new lambda.Function(this, 'ImportFileParserFunction', {
       runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'dist/handlers/importFileParser.handler',
-      code: lambda.Code.fromAsset(backendPath),
+      code: lambda.Code.fromAsset(backendPath, {
+        exclude: ['infrastructure/**', 'cdk.out/**', 'node_modules/**', '.git/**'],
+      }),
       memorySize: 128,
       timeout: cdk.Duration.seconds(10),
       environment: {
@@ -125,10 +145,17 @@ export class ImportServiceStack extends cdk.Stack {
     });
 
     const importResource = this.restApi.root.addResource('import');
+
+    const authorizer = new apigateway.TokenAuthorizer(this, 'BasicTokenAuthorizer', {
+      handler: basicAuthorizerFn,
+      identitySource: 'method.request.header.Authorization',
+    });
+
     importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileFn), {
       requestParameters: {
         'method.request.querystring.name': true,
       },
+      authorizer,
     });
 
     bucket.addEventNotification(
